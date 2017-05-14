@@ -1,30 +1,29 @@
 require 'open-uri'
 require 'nokogiri'
 require_relative './people'
+require 'capybara'
+require 'capybara/poltergeist'
+Capybara.javascript_driver = :poltergeist
 
 class ScrapeMp
   def parser
-    DataMapper.auto_upgrade!
-    url = "http://drv.vmr.gov.ua/deputaty.aspx"
-    page = get_page(url)
-    page.css('#form1 table tr td div  table tr td:nth-child(1)').each do |mp|
-
-      mp.css('table .ELEMENTY_LABEL').each_with_index do |fio, index|
-        faction = mp.css("table #ContentPlaceHolder1_ExampleRepeater_LAB_PARTIYA_#{index}").text
-        next if faction == "уповноважений"
-        okrug = mp.css("table #ContentPlaceHolder1_ExampleRepeater_LAB_OKRUG_#{index}").text
-        full_name = fio.text
-        photo_url = mp.css("table #ContentPlaceHolder1_ExampleRepeater_IMG_FOTO_#{index}")[0]["src"]
-        scrape_mp(full_name, okrug, faction, photo_url)
-      end
-
+    i = 3000
+    url = "http://www.city.kharkov.ua/uk/gorodskaya-vlast/gorodskoj-sovet/deputatyi.html#all"
+    session = Capybara::Session.new(:poltergeist)
+    session.visit(url)
+    session.all('#deputy_container .tbody .row').each do |mp|
+      full_name = mp.find('.lf_name .last_name').text + " " +  mp.find('.lf_name .first_name').text
+      photo_url = "http://www.city.kharkov.ua" + get_page(mp.all('.lf_name a')[0][:href]).css('.box_photo img')[0][:src]
+      faction = mp.find('.party a').text
+      i = i + 1
+      scrape_mp(full_name, nil, faction, photo_url, i)
     end
     #resigned_mp()
     create_mer()
   end
   def create_mer
-    #TODO create mer Sadovoy
-    names = %w{Моргунов Сергій Анатолійович}
+    #TODO create mer Kernes
+    names = %w{Кернес Геннадій Адольфович}
     People.first_or_create(
         first_name: names[1],
         middle_name: names[2],
@@ -32,7 +31,7 @@ class ScrapeMp
         full_name: names.join(' '),
         deputy_id: 1111,
         okrug: nil,
-        photo_url: "http://www.vmr.gov.ua/SiteAssets/Lists/CityMajor/Default/Міський голова Сергій Моргунов.jpg",
+        photo_url: "http://www.city.kharkov.ua/assets/images/kernes.jpg",
         faction: nil,
         end_date: nil,
         created_at: "9999-12-31"
@@ -46,29 +45,25 @@ class ScrapeMp
     page_resigned = get_page(uri)
     scrape_mp( )
   end
-  def scrape_mp(fio, okrug, party, image, date_end=nil)
+  def scrape_mp(fio, okrug, party, image, rada_id ,date_end=nil)
     party = case
-              when party[/Солідарність/]
+              when party[/СОЛІДАРНІСТЬ/]
                 "Блок Петра Порошенка"
-              when party[/Самопоміч/]
+              when party[/САМОПОМІЧ/]
                 "Самопоміч"
-              when party[/Батьківщина/]
-                "Батьківщина"
-              when party[/Свобода/]
-                "Свобода"
+              when party[/Наш край/]
+                "Наш край"
               else
                 party
             end
-    rada_id = image[/\d+/]
+
     name = fio.gsub(/\s{2,}/,' ')
-    image = "http://drv.vmr.gov.ua/" + image.strip
     name_array = name.split(' ')
     people = People.first(
         first_name: name_array[1],
         middle_name: name_array[2],
         last_name: name_array[0],
         full_name: name_array.join(' '),
-        deputy_id: rada_id,
         okrug: okrug,
         photo_url: image,
         faction: party,
