@@ -11,7 +11,7 @@ end
 class ScrapeMp
   def parser
     i = 3000
-    url = "http://www.city.kharkov.ua/uk/gorodskaya-vlast/gorodskoj-sovet/deputatyi.html#all"
+    url = "http://www.city.kharkov.ua/ru/gorodskaya-vlast/gorodskoj-sovet/deputatyi.html#all"
     session = Capybara::Session.new(:poltergeist)
     session.visit(url)
     session.all('#deputy_container .tbody .row').each do |mp|
@@ -26,7 +26,7 @@ class ScrapeMp
   end
   def create_mer
     #TODO create mer Kernes
-    names = %w{Кернес Геннадій Адольфович}
+    names = %w{Кернес Геннадий Адольфович}
     People.first_or_create(
         first_name: names[1],
         middle_name: names[2],
@@ -50,7 +50,7 @@ class ScrapeMp
   end
   def scrape_mp(fio, okrug, party, image, rada_id ,date_end=nil)
     party = case
-              when party[/СОЛІДАРНІСТЬ/]
+              when party[/СОЛИДАРНОСТЬ/]
                 "Блок Петра Порошенка"
               when party[/САМОПОМІЧ/]
                 "Самопоміч"
