@@ -19,6 +19,7 @@ class People
   property :photo_url,    Text    # A varchar type string, for short strings
   property :faction,     String
   property :okrug,        Integer
+  property :start_date,     Date
   property :end_date,     Date
   property :created_at,   DateTime  # A DateTime, for any date you might like.
   property :updated_at,   DateTime
